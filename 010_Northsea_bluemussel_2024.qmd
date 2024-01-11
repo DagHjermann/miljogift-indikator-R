@@ -1,0 +1,83 @@
+---
+title: "010_Northsea_bluemussel_2024"
+format: html
+---
+
+
+https://miljostatus.miljodirektoratet.no/tema/hav-og-kyst/havindikatorer/nordsjoen-skagerrak/forurensende-stoffer/
+14-15 stations  
+
+## Packages  
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(readxl)
+
+```
+
+## Data  
+
+```{r}
+
+# getwd()
+
+fn <- "/home/jovyan/shared/common/DHJ/miljogift-indikator-R/data_old/North Sea/MytiEdu_Snegl_2020_ver4.xlsx"
+df_old_bluemussel <- readxl::read_excel(fn) %>%
+  filter(SPECIES_ID %in% "Blåskjell")
+
+# stations <- unique(df_old_bluemussel$STATION_CODE)
+# dput(stations)
+
+stations <- c("15A", "22A", "26A2", "30A", "31A", "36A", "57A", "64A", "65A", 
+              "76A2", "I023", "I024", "I131A", "I133", "I241", "I301", "I304", "56A")
+
+# params <- unique(df_old_bluemussel$PARAM)
+# dput(params)
+
+params <- data.frame(
+  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
+  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
+  PARAM_level = c("CD", "HG", "PB", "CB_S7", "DDTEP_exloq", "TBT", "BDE6S_exloq", "HCB"))
+
+fn <- "/home/jovyan/shared/common/DHJ/Milkys2/App01_timeseries/Data2022/dat_raw5.rds"
+dat_niva <- readRDS(fn) %>%
+  rename(PARAM_level = PARAM) %>%
+  filter(STATION_CODE %in% stations,
+         PARAM_level %in% params$PARAM_level, 
+         x == 2022)
+
+dat_niva_median <- dat_niva %>%
+  group_by(STATION_CODE, PARAM_level, YEAR = x, UNIT) %>%
+  summarize(
+    conc_median = median(VALUE),
+    perc_detected = 100*mean(is.na(Flag))
+  )
+
+fn <- "/home/jovyan/shared/common/DHJ/Milkys2/App01_timeseries/Data2022/dat_trend.rds"
+dat_niva_trends <- readRDS(fn) %>%
+  rename(PARAM_trend = PARAM) %>%
+  filter(STATION_CODE %in% stations,
+         PARAM_trend %in% params$PARAM_trend, 
+         Trend_type %in% "short") %>%
+  select(STATION_CODE, PARAM_trend, Trend_type, N_years_10yr, Years_over_LOQ, Trend_string)
+
+dat_niva <- dat_niva_median %>%
+  left_join(params, by = join_by(PARAM_level)) %>%
+  left_join(dat_niva_trends, by = join_by(PARAM_trend, STATION_CODE)) %>%
+  select(PARAM, PARAM_level, PARAM_trend, STATION_CODE, everything()) %>%
+  arrange(PARAM, STATION_CODE)
+
+```
+
+### Add limit values  
+
+```{r}
+
+param <- "CD"  
+
+```
+
+
+
