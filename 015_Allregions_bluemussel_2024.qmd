@@ -15,7 +15,7 @@ library(dplyr)
 library(ggplot2)
 library(readxl)
 library(glue)      # glue()
-  
+
 ```
 
 ## Data  
@@ -25,11 +25,12 @@ library(glue)      # glue()
 ```{r}
 
 params <- data.frame(
-  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
-  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
-  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "HCB"))
+  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
+  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
+  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "CU", "ZN"))
 
 current_year <- 2023
+series_must_last_until <- 2020
 
 ```
 
