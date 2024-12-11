@@ -52,12 +52,21 @@ dat_trend <- readRDS(filename_trends) %>%
   rename(
     PARAM_trend = PARAM)
 
-dat_level <- readRDS(filename_110) %>%
+dat_level_allyears <- readRDS(filename_110) %>%
   filter(
     LATIN_NAME %in% "Mytilus edulis",
     PARAM %in% params$PARAM_level, 
-    Basis == "WW",
-    MYEAR == current_year) %>%
+    Basis == "WW") %>%
+  group_by(PARAM, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis) %>%
+  mutate(
+    last_year = max(MYEAR)) %>%
+  ungroup()
+
+dat_level <- dat_level_allyears %>%
+  filter(
+    last_year >= series_must_last_until) %>%
+  filter(
+    MYEAR == last_year) %>%
   rename(
     PARAM_level = PARAM)
 
@@ -71,6 +80,23 @@ dat_niva_1 <- dat_level %>%
   arrange(PARAM, STATION_CODE)
 
 ```
+
+### Number of stations  data  
+```{r}
+
+dat_level_allyears %>%
+  distinct(PARAM, STATION_CODE, last_year) %>%
+  group_by(PARAM) %>%
+  summarize(
+    stations_2018 = length(STATION_CODE[last_year >= 2018]),
+    stations_2019 = length(STATION_CODE[last_year >= 2019]),
+    stations_2020 = length(STATION_CODE[last_year >= 2020]),
+    stations_2021 = length(STATION_CODE[last_year >= 2021]),
+    stations_2022 = length(STATION_CODE[last_year >= 2022]),
+    stations_2023 = length(STATION_CODE[last_year >= 2023]))
+
+```
+
 
 ### Add coordinates  
 ```{r}
@@ -206,6 +232,5 @@ ggplot(dat_niva_4, aes(STATION_CODE, Ratio_food)) +
   geom_point() + 
   facet_wrap(vars(PARAM), scales = "free_y")
 ```
-
 
 
