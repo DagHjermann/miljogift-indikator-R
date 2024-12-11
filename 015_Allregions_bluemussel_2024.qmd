@@ -213,25 +213,35 @@ dat_niva_4 <- dat_niva_3 %>%
     perc_detected = Over_LOQ/N_median)
 
 ```
-#### Check plots  
+
+## Check plots  
 ```{r}
 
 ggplot(dat_niva_4, aes(STATION_CODE, Value, color = perc_detected)) +
   geom_point() + 
-  geom_point(aes(Value), shape = "*") + 
-  facet_wrap(vars(PARAM), scales = "free_y")
+  scale_y_log10() +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
 
 ggplot(dat_niva_4, aes(STATION_CODE, Ratio_EQS)) +
   geom_point() + 
-  facet_wrap(vars(PARAM), scales = "free_y")
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
 
 ggplot(dat_niva_4, aes(STATION_CODE, Ratio_proref)) +
   geom_point() + 
-  facet_wrap(vars(PARAM), scales = "free_y")
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
 
 ggplot(dat_niva_4, aes(STATION_CODE, Ratio_food)) +
   geom_point() + 
-  facet_wrap(vars(PARAM), scales = "free_y")
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
 ```
-
 
