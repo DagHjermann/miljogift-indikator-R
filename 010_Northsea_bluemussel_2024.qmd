@@ -4,7 +4,7 @@ format: html
 ---
 
 
-https://miljostatus.miljodirektoratet.no/tema/hav-og-kyst/havindikatorer/nordsjoen-skagerrak/forurensende-stoffer/
+https://miljostatus.miljodirektoratet.no/tema/hav-og-kyst/havindikatorer/nordsjoen-skagerrak/forurensende-stoffer/  
 14-15 stations  
 
 ## Packages  
@@ -14,11 +14,13 @@ https://miljostatus.miljodirektoratet.no/tema/hav-og-kyst/havindikatorer/nordsjo
 library(dplyr)
 library(ggplot2)
 library(readxl)
-
+library(glue)      # glue()
+  
 ```
 
 ## Data  
 
+### Main data  
 ```{r}
 
 # getwd()
@@ -39,21 +41,38 @@ stations <- c("15A", "22A", "26A2", "30A", "31A", "36A", "57A", "64A", "65A",
 params <- data.frame(
   PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
   PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "HCB"),
-  PARAM_level = c("CD", "HG", "PB", "CB_S7", "DDTEP_exloq", "TBT", "BDE6S_exloq", "HCB"))
+  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "HCB"))
 
 fn <- "/home/jovyan/shared/common/DHJ/Milkys2/App01_timeseries/Data2022/dat_raw5.rds"
-dat_niva <- readRDS(fn) %>%
-  rename(PARAM_level = PARAM) %>%
+dat_niva_indiv <- readRDS(fn) %>%
   filter(STATION_CODE %in% stations,
-         PARAM_level %in% params$PARAM_level, 
-         x == 2022)
+         PARAM %in% c(params$PARAM_trend, params$PARAM_level), 
+         x == 2022) %>%
+  mutate(VALUE_low = ifelse(Flag %in% "<", 0, VALUE))
 
-dat_niva_median <- dat_niva %>%
-  group_by(STATION_CODE, PARAM_level, YEAR = x, UNIT) %>%
+xtabs(~PARAM, dat_niva_indiv)
+xtabs(~STATION_CODE + PARAM, dat_niva_indiv)
+
+dat_niva_median_trend <- dat_niva_indiv %>%
+  filter(PARAM %in% params$PARAM_trend) %>% 
+  rename(PARAM_trend = PARAM) %>%
+  group_by(STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis, PARAM_trend, YEAR = x, UNIT) %>%
   summarize(
-    conc_median = median(VALUE),
-    perc_detected = 100*mean(is.na(Flag))
+    conc_median_trend = median(VALUE),
+    perc_detected_trend = 100*mean(is.na(Flag)),
+    .groups = "drop"
   )
+
+dat_niva_median_level <- dat_niva_indiv %>%
+  filter(PARAM %in% params$PARAM_level) %>% 
+  rename(PARAM_level = PARAM) %>%
+  group_by(STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis, PARAM_level, YEAR = x, UNIT) %>%
+  summarize(
+    conc_median_level = median(VALUE),
+    perc_detected_level = 100*mean(is.na(Flag)),
+    .groups = "drop"
+  )
+
 
 fn <- "/home/jovyan/shared/common/DHJ/Milkys2/App01_timeseries/Data2022/dat_trend.rds"
 dat_niva_trends <- readRDS(fn) %>%
@@ -61,22 +80,153 @@ dat_niva_trends <- readRDS(fn) %>%
   filter(STATION_CODE %in% stations,
          PARAM_trend %in% params$PARAM_trend, 
          Trend_type %in% "short") %>%
-  select(STATION_CODE, PARAM_trend, Trend_type, N_years_10yr, Years_over_LOQ, Trend_string)
+  select(STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis, PARAM_trend, Trend_type, N_years_10yr, Years_over_LOQ, Trend_string)
 
-dat_niva <- dat_niva_median %>%
-  left_join(params, by = join_by(PARAM_level)) %>%
-  left_join(dat_niva_trends, by = join_by(PARAM_trend, STATION_CODE)) %>%
-  select(PARAM, PARAM_level, PARAM_trend, STATION_CODE, everything()) %>%
+dat_niva_1 <- dat_niva_median_level %>%
+  left_join(params, by = 
+    dat_niva_median_level, 
+    by = join_by(PARAM_level, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis)) %>%
+  left_join(
+    dat_niva_trends, 
+    by = join_by(PARAM_trend, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis)) %>% # names()
+  select(PARAM, LATIN_NAME, TISSUE_NAME, Basis, PARAM_level, PARAM_trend, STATION_CODE, 
+         everything()) %>%
   arrange(PARAM, STATION_CODE)
 
 ```
 
-### Add limit values  
+### Add coordinates  
+```{r}
+
+lookup_coordinates <- readRDS("data_input/lookup/lookup_coordinates.rds") %>%
+  select(STATION_CODE, Long, Lat, Station_name)  
+
+simple_map <- map_data("world")
+
+dat_niva_2 <- dat_niva_1 %>%
+  left_join(lookup_coordinates, by = "STATION_CODE", relationship = "many-to-one")
+
+```
+
+
+#### Check plot  
+```{r}
+
+dat_niva_2 %>%
+  filter(PARAM %in% "CD") %>%
+  ggplot(aes(Long, Lat)) +
+  annotation_map(simple_map, fill = "lightgreen") +
+  geom_point(aes(color = conc_median)) +
+  geom_text(aes(label = glue("{Station_name} ({STATION_CODE})")), hjust = 0, nudge_x = 0.1)
+
+```
+
+
+### Add EQS and proref limit values  
 
 ```{r}
 
-param <- "CD"  
+# Code from App01 in Milkys2 (3.4.2023)
+# Changes to the code:
+#     1. file paths  
+#     2. replaced 'dat_all_prep3' with 'dat_niva_2'  
+#     3. in "by =" in left-join, "PARAM_level" = "PARAM" is used (instead of just "PARAM")
+  
+# Lookup files for EQS and Proref   
+fn <- "/home/jovyan/shared/common/DHJ/Milkys2/Input_data/Lookup_tables/Lookup_EQS_limits.csv"
+lookup_eqs <- read.csv(fn) %>%
+  filter(Basis %in% c("WW", "WWa")) %>%
+  select(-Long_name, -Kommentar) %>%
+  rename(EQS = Limit)
+fn <- "/home/jovyan/shared/common/DHJ/Milkys2/Input_data/Lookup_tables/Lookup_proref.csv"
+lookup_proref <- read.csv(fn) %>%
+  filter(Basis %in% c("WW", "WWa")) %>%
+  select(PARAM, LATIN_NAME, TISSUE_NAME, Basis, Proref) 
+  
+# Add EQS and Proref to data    
+lookup_no_eqs <- dat_niva_2 %>%
+  distinct(PARAM) %>%
+  anti_join(lookup_eqs, by = "PARAM")
+lookup_eqs_nospecies <- lookup_eqs %>%
+  filter(is.na(LATIN_NAME))
+lookup_eqs_species <- lookup_eqs %>%
+  filter(!is.na(LATIN_NAME))
+overlap <- intersect(lookup_eqs_species$PARAM, lookup_eqs_nospecies$PARAM)
+if (length(overlap) > 0)
+  stop("In the EQS file, each parameter must have either LATIN_NAME empty, or LATIN_NAME for all rows")
+if (sum(is.na(lookup_eqs_species$Basis)) > 0)
+  stop("In the EQS file, all rows with LATIN_NAME must also have Basis given")
+dat_niva_3 <- bind_rows(
+  dat_niva_2 %>% 
+    filter(PARAM %in% lookup_no_eqs$PARAM),
+  dat_niva_2 %>% 
+    filter(PARAM %in% lookup_eqs_nospecies$PARAM) %>%
+    left_join(lookup_eqs_nospecies %>% select(-LATIN_NAME, -Basis), by = c("PARAM_level" = "PARAM")),
+  dat_niva_2 %>%
+    filter(PARAM %in% lookup_eqs_species$PARAM) %>%
+    left_join(lookup_eqs_species, by = c("PARAM_level" = "PARAM", "LATIN_NAME", "Basis")),
+) %>%
+  left_join(lookup_proref, by = c("PARAM", "LATIN_NAME", "TISSUE_NAME", "Basis"))
+  
+```
 
+### Add food limits (mattrygghet)  
+
+```{r}
+
+lookup_limits_food_all <- readxl::read_excel("data_input/lookup/Grenseverdier_fra_Sylvia.xlsx")
+
+lookup_limits_food <- lookup_limits_food_all %>%
+  filter(!is.na(NIVA_CODE)) %>%
+  mutate(
+    LATIN_NAME = case_when(
+      NIVA_CODE %in% c("LI", "MU") ~ "Gadus morhua",
+      NIVA_CODE %in% "SB" ~ "Mytilus edulis"),
+    TISSUE_NAME = case_when(
+      NIVA_CODE %in% "LI" ~ "Lever",
+      NIVA_CODE %in% "MU" ~ "Muskel",
+      NIVA_CODE %in% "SB" ~ "Whole soft body")
+  )
+  
+# All limits are in micrograms - change metals to milligrams   
+lookup_limits_food <- lookup_limits_food %>%
+  mutate(
+    Food_limit = case_when(
+      PARAM %in% c("HG") ~ Mattrygghet/1000,
+      # PARAM %in% c("CD", "PB", "HG") ~ Mattrygghet/1000,
+      TRUE ~ Mattrygghet)
+    ) %>%
+    select(PARAM, LATIN_NAME, TISSUE_NAME, Food_limit)
+
+dat_niva_4 <- dat_niva_3 %>%
+  left_join(lookup_limits_food, 
+            by = c("PARAM", "LATIN_NAME", "TISSUE_NAME"), 
+            relationship = "many-to-one") %>%
+  mutate(
+    Ratio_EQS = conc_median_low/EQS,
+    Ratio_proref = conc_median_low/Proref,
+    Ratio_food = conc_median_low/Food_limit)
+
+```
+#### Check plots  
+```{r}
+
+ggplot(dat_niva_4, aes(STATION_CODE, conc_median, color = perc_detected)) +
+  geom_point() + 
+  geom_point(aes(conc_median_low), shape = "*") + 
+  facet_wrap(vars(PARAM), scales = "free_y")
+
+ggplot(dat_niva_4, aes(STATION_CODE, Ratio_EQS)) +
+  geom_point() + 
+  facet_wrap(vars(PARAM), scales = "free_y")
+
+ggplot(dat_niva_4, aes(STATION_CODE, Ratio_proref)) +
+  geom_point() + 
+  facet_wrap(vars(PARAM), scales = "free_y")
+
+ggplot(dat_niva_4, aes(STATION_CODE, Ratio_food)) +
+  geom_point() + 
+  facet_wrap(vars(PARAM), scales = "free_y")
 ```
 
 
