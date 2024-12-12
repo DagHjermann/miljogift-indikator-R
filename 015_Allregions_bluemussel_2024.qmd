@@ -180,7 +180,11 @@ dat_niva_3 <- bind_rows(
 
 ```{r}
 
-lookup_limits_food_all <- readxl::read_excel("data_input/lookup/Grenseverdier_fra_Sylvia.xlsx")
+# do only once:
+# lookup_limits_food_all <- readxl::read_excel("data_input/lookup/Grenseverdier_fra_Sylvia.xlsx")
+# readr::write_csv(lookup_limits_food_all, "data_input/lookup/Grenseverdier_fra_Sylvia.csv")
+
+lookup_limits_food_all <- read.csv("data_input/lookup/Grenseverdier_fra_Sylvia.csv")
 
 lookup_limits_food <- lookup_limits_food_all %>%
   filter(!is.na(NIVA_CODE)) %>%

@@ -1,0 +1,33 @@
+PARAM,Kommentar...2,Organisme/vev,LATIN_NAME,NIVA_CODE,NIFES,NIVA,EQS,Mattrygghet,Kommentar...10
+HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,x,x,20,50,NA
+HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,NA,NA,20,50,NA
+CD,NA,"Fisk, filet",Gadus morhua,MU,x,NA,NA,5,NA
+CD,NA,"Krepsdyr, muskel",NA,NA,x,NA,NA,50,NA
+CD,NA,Skjell og snegler,Mytilus edulis,SB,NA,x,NA,100,NA
+PB,NA,"Fisk, filet",Gadus morhua,MU,x,NA,NA,30,NA
+PB,NA,"Krepsdyr, muskel",NA,NA,NA,NA,NA,50,NA
+PB,NA,Skjell og snegler,Mytilus edulis,SB,NA,NA,NA,150,NA
+Dioksiner*,Dioksiner*,"Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,NA,NA,0.0035,0.0035,(2005-TE)
+Dioksiner*,Dioksiner*,"Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,0,0,0.0035,0.0035,(2005-TE)
+Dioksiner og dl-PCB*,Dioksiner og dl-PCB*,"Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,NA,NA,0.0065,0.0065,(2005-TE)
+Dioksiner og dl-PCB*,Dioksiner og dl-PCB*,"Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,0,0,0.0065,0.0065,(2005-TE)
+Dioksiner og dl-PCB*,Dioksiner og dl-PCB*,"Fisk, lever",Gadus morhua,LI,x,NA,0.0065,0.0065,(2005-TE)
+CB_S7,"PCB (dutch seven for NIVA, six for NIFES)","Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,NA,NA,NA,75,NA
+CB_S7,"PCB (dutch seven for NIVA, six for NIFES)","Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,0,0,0,75,0
+CB_S7,"PCB (dutch seven for NIVA, six for NIFES)","Fisk, lever",Gadus morhua,LI,x,x,NA,200,NA
+HCB,NA,Alle,Gadus morhua,LI,x,x,10,NA,NA
+HCB,NA,Alle,Mytilus edulis,SB,x,x,10,NA,0
+DDEPP,DDT (DDEpp),Alle,Gadus morhua,LI,x,x,610,NA,NA
+DDEPP,DDT (DDEpp),Alle,Mytilus edulis,SB,x,x,610,NA,0
+BDE6S,NA,Alle,Gadus morhua,LI,x,NA,0.085,NA,NA
+BDE6S,NA,Alle,Mytilus edulis,SB,x,0,0.085,NA,0
+Cis-chlordane,Cis-chlordane,Alle,Gadus morhua,LI,x,NA,NA,NA,NA
+Cis-chlordane,Cis-chlordane,Alle,Mytilus edulis,SB,x,0,0,NA,0
+Oxy-chlordane,Oxy-chlordane,Alle,Gadus morhua,LI,x,NA,NA,NA,NA
+Oxy-chlordane,Oxy-chlordane,Alle,Mytilus edulis,SB,x,0,0,NA,0
+Trans-chlordane,Trans-chlordane,Alle,Gadus morhua,LI,x,NA,NA,NA,NA
+Trans-chlordane,Trans-chlordane,Alle,Mytilus edulis,SB,x,0,0,NA,0
+toksafen,toksafen,Alle,Gadus morhua,LI,(x),NA,NA,NA,NA
+toksafen,toksafen,Alle,Mytilus edulis,SB,(x),0,0,NA,0
+Radionuklider (hvilke?),Radionuklider (hvilke?),?,Gadus morhua,LI,x,NA,NA,600,NA
+Radionuklider (hvilke?),Radionuklider (hvilke?),?,Mytilus edulis,SB,x,0,0,600,0
