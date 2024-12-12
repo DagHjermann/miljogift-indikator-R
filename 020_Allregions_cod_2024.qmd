@@ -1,0 +1,298 @@
+---
+title: "015_allregions_bluemussel_2024"
+format: html
+---
+
+
+https://miljostatus.miljodirektoratet.no/tema/hav-og-kyst/havindikatorer/nordsjoen-skagerrak/forurensende-stoffer/  
+14-15 stations  
+
+## Packages  
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(glue)      # glue()
+
+```
+
+## Data  
+
+### Parameters  
+
+```{r}
+
+params <- data.frame(
+  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
+  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
+  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "CU", "ZN"))
+
+current_year <- 2023
+series_must_last_until <- 2020
+
+```
+
+
+### Main data  
+```{r}
+
+# getwd()
+filename_110 <- "../Milkys2/Data/110_mediandata_updated_ELU_2024-09-25.rds"      # update
+filename_trends <- "../Milkys2/Data/milkys4_903_trends_11.rds"                   # update
+
+dat_trend <- readRDS(filename_trends) %>%
+  filter(
+    LATIN_NAME %in% "Mytilus edulis",
+    PARAM %in% params$PARAM_trend,
+    Basis == "WW",
+    Trend_type %in% "short") %>%
+  mutate(
+    STATION_CODE = ifelse(STATION_CODE == "36A1", "36A", STATION_CODE)) %>%
+  rename(
+    PARAM_trend = PARAM)
+
+dat_level_allyears <- readRDS(filename_110) %>%
+  filter(
+    LATIN_NAME %in% "Mytilus edulis",
+    PARAM %in% params$PARAM_level, 
+    Basis == "WW") %>%
+  group_by(PARAM, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis) %>%
+  mutate(
+    last_year = max(MYEAR)) %>%
+  ungroup()
+
+dat_level <- dat_level_allyears %>%
+  filter(
+    last_year >= series_must_last_until) %>%
+  filter(
+    MYEAR == last_year) %>%
+  rename(
+    PARAM_level = PARAM) %>%
+  select(
+    -last_year)   # also a column in trend data with this name
+
+dat_niva_1 <- dat_level %>%
+  left_join(params, by = join_by(PARAM_level)) %>%
+  left_join(
+    dat_trend, 
+    by = join_by(PARAM_trend, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis)) %>% # names()
+  select(PARAM, LATIN_NAME, TISSUE_NAME, Basis, PARAM_level, PARAM_trend, STATION_CODE, 
+         everything()) %>%
+  arrange(PARAM, STATION_CODE)
+
+```
+
+### Number of stations  data  
+```{r}
+
+dat_level_allyears %>%
+  distinct(PARAM, STATION_CODE, last_year) %>%
+  group_by(PARAM) %>%
+  summarize(
+    stations_2018 = length(STATION_CODE[last_year >= 2018]),
+    stations_2019 = length(STATION_CODE[last_year >= 2019]),
+    stations_2020 = length(STATION_CODE[last_year >= 2020]),
+    stations_2021 = length(STATION_CODE[last_year >= 2021]),
+    stations_2022 = length(STATION_CODE[last_year >= 2022]),
+    stations_2023 = length(STATION_CODE[last_year >= 2023]))
+
+```
+
+
+### Add coordinates  
+```{r}
+
+lookup_coordinates <- readRDS("data_input/lookup/lookup_coordinates.rds") %>%
+  select(STATION_CODE, Long, Lat, Station_name)  
+
+dat_niva_2 <- dat_niva_1 %>%
+  left_join(lookup_coordinates, by = "STATION_CODE", relationship = "many-to-one")
+
+```
+
+
+#### Check plot  
+```{r}
+
+simple_map <- map_data("world")
+
+dat_niva_2 %>%
+  filter(PARAM %in% "CD") %>%
+  ggplot(aes(Long, Lat)) +
+  annotation_map(simple_map, fill = "lightgreen") +
+  geom_point(aes(color = Value)) +
+  geom_text(aes(label = glue("{Station_name} ({STATION_CODE})")), hjust = 0, nudge_x = 0.1)
+
+```
+
+
+### Add EQS and proref limit values  
+
+```{r}
+
+# Code from App01 in Milkys2 (3.4.2023)
+# Changes to the code:
+#     1. file paths  
+#     2. replaced 'dat_all_prep3' with 'dat_niva_2'  
+#     3. in "by =" in left-join, "PARAM_level" = "PARAM" is used (instead of just "PARAM")
+  
+# Lookup files for EQS and Proref   
+fn <- "../Milkys2/Input_data/Lookup_tables/Lookup_EQS_limits.csv"
+lookup_eqs <- read.csv(fn) %>%
+  filter(Basis %in% c("WW", "WWa")) %>%
+  select(-Long_name, -Kommentar) %>%
+  rename(EQS = Limit)
+
+fn <- "data_input/lookup/lookup_proref.rds"
+lookup_proref <- readRDS(fn) %>%
+  filter(LATIN_NAME %in% c("Mytilus edulis"))
+  
+# Add EQS and Proref to data    
+lookup_no_eqs <- dat_niva_2 %>%
+  distinct(PARAM) %>%
+  anti_join(lookup_eqs, by = "PARAM")
+lookup_eqs_nospecies <- lookup_eqs %>%
+  filter(is.na(LATIN_NAME))
+lookup_eqs_species <- lookup_eqs %>%
+  filter(!is.na(LATIN_NAME))
+overlap <- intersect(lookup_eqs_species$PARAM, lookup_eqs_nospecies$PARAM)
+if (length(overlap) > 0)
+  stop("In the EQS file, each parameter must have either LATIN_NAME empty, or LATIN_NAME for all rows")
+if (sum(is.na(lookup_eqs_species$Basis)) > 0)
+  stop("In the EQS file, all rows with LATIN_NAME must also have Basis given")
+dat_niva_3 <- bind_rows(
+  dat_niva_2 %>% 
+    filter(PARAM %in% lookup_no_eqs$PARAM),
+  dat_niva_2 %>% 
+    filter(PARAM %in% lookup_eqs_nospecies$PARAM) %>%
+    left_join(lookup_eqs_nospecies %>% select(-LATIN_NAME, -Basis), by = c("PARAM_level" = "PARAM")),
+  dat_niva_2 %>%
+    filter(PARAM %in% lookup_eqs_species$PARAM) %>%
+    left_join(lookup_eqs_species, by = c("PARAM_level" = "PARAM", "LATIN_NAME", "Basis")),
+) %>%
+  left_join(lookup_proref, by = c("PARAM", "LATIN_NAME"))
+  
+```
+
+### Add food limits (mattrygghet)  
+
+```{r}
+
+lookup_limits_food_all <- readxl::read_excel("data_input/lookup/Grenseverdier_fra_Sylvia.xlsx")
+
+lookup_limits_food <- lookup_limits_food_all %>%
+  filter(!is.na(NIVA_CODE)) %>%
+  mutate(
+    LATIN_NAME = case_when(
+      NIVA_CODE %in% c("LI", "MU") ~ "Gadus morhua",
+      NIVA_CODE %in% "SB" ~ "Mytilus edulis"),
+    TISSUE_NAME = case_when(
+      NIVA_CODE %in% "LI" ~ "Lever",
+      NIVA_CODE %in% "MU" ~ "Muskel",
+      NIVA_CODE %in% "SB" ~ "Whole soft body")
+  )
+  
+# All limits are in micrograms - change metals to milligrams   
+lookup_limits_food <- lookup_limits_food %>%
+  mutate(
+    Food_limit = case_when(
+      PARAM %in% c("HG") ~ Mattrygghet/1000,
+      # PARAM %in% c("CD", "PB", "HG") ~ Mattrygghet/1000,
+      TRUE ~ Mattrygghet)
+    ) %>%
+    select(PARAM, LATIN_NAME, TISSUE_NAME, Food_limit)
+
+dat_niva_4 <- dat_niva_3 %>%
+  left_join(lookup_limits_food, 
+            by = c("PARAM", "LATIN_NAME", "TISSUE_NAME"), 
+            relationship = "many-to-one") %>%
+  mutate(
+    Ratio_EQS = Value/EQS,
+    Ratio_proref = Value/PROREF,
+    Ratio_food = Value/Food_limit,
+    perc_detected = Over_LOQ/N_median)
+
+```
+### Add 1's and 2's  
+
+```{r}
+
+dat_niva_4 <- dat_niva_4 %>%
+  mutate(
+    Color_EQS = ifelse(Ratio_EQS <= 1, 1, 2),
+    Color_proref = ifelse(Ratio_proref <= 1, 1, 2),
+    Color_food = ifelse(Ratio_food <= 1, 1, 2),
+  ) %>%
+  rename(
+    PROREF_stations = Stations
+  )
+
+```
+
+
+
+### Change column order and selection  
+
+```{r}
+
+cols <- c("PARAM", "LATIN_NAME", "TISSUE_NAME", "Basis", "PARAM_level", "PARAM_trend", 
+          "STATION_CODE", "Long", "Lat", "Station_name", 
+          "Value", "UNIT", 
+          "Ratio_EQS", "Color_EQS", "Ratio_proref", "Color_proref", "Ratio_food", "Color_food",
+          "EQS", "PROREF", "Food_limit", 
+          "Trend_string", "trendshape", "MYEAR", "DRYWT", "FAT_PERC", 
+          "N_median", "Det_limit", "Over_LOQ", 
+          "Value_min", "Value_p25", "Value_p75", "Value_max", 
+          "PROREF_stations", 
+          "series", "firstyear_all", "lastyear_all", "Trend_type", "last_year", "first_year", "p", 
+          "y_mean", "y_q2.5", "y_q97.5", "perc_detected")
+
+dat_niva_5 <- dat_niva_4[cols]
+
+```
+
+
+## Check plots  
+```{r}
+
+ggplot(dat_niva_5, aes(STATION_CODE, Value, color = perc_detected)) +
+  geom_point() + 
+  scale_y_log10() +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
+
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_EQS)) +
+  geom_point() + 
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
+
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_proref)) +
+  geom_point() + 
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
+
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_food)) +
+  geom_point() + 
+  scale_y_log10() +
+  geom_hline(aes(yintercept = 1), linetype = "dashed") +
+  facet_wrap(vars(PARAM), scales = "free_y") +
+  ggeasy::easy_rotate_x_labels(-45)
+```
+
+
+## Save  
+
+```{r}
+
+readr::write_csv(dat_niva_5, 
+                 glue("data/allregions_bluemussel_{current_year}.csv")
+                 )
+
+```
+
