@@ -1,6 +1,6 @@
 PARAM,Kommentar...2,Organisme/vev,LATIN_NAME,NIVA_CODE,NIFES,NIVA,EQS,Mattrygghet,Kommentar...10
-HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,x,x,20,50,NA
-HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,NA,NA,20,50,NA
+HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Gadus morhua,MU,x,x,20,300,NA
+HG,NA,"Fisk, filet, krepsdyr muskel, skjell og snegler",Mytilus edulis,SB,NA,NA,20,500,NA
 CD,NA,"Fisk, filet",Gadus morhua,MU,x,NA,NA,5,NA
 CD,NA,"Krepsdyr, muskel",NA,NA,x,NA,NA,50,NA
 CD,NA,Skjell og snegler,Mytilus edulis,SB,NA,x,NA,100,NA
