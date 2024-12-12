@@ -25,12 +25,17 @@ library(glue)      # glue()
 ```{r}
 
 params <- data.frame(
-  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
-  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN"),
-  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "CU", "ZN"))
+  PARAM       = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN", 
+                  "D5", "PFOS", "PFOA"),
+  PARAM_trend = c("CD", "HG", "PB", "CB_S7", "DDEPP", "TBT", "BDE6S", "CU", "ZN", 
+                  "D5", "PFOS", "PFOA"),
+  PARAM_level = c("CD", "HG", "PB", "CB_S7_exloq", "DDEPP", "TBT", "BDE6S_exloq", "CU", "ZN", 
+                  "D5", "PFOS", "PFOA"))
 
 current_year <- 2023
 series_must_last_until <- 2020
+
+species <- "Gadus morhua"
 
 ```
 
@@ -44,7 +49,7 @@ filename_trends <- "../Milkys2/Data/milkys4_903_trends_11.rds"                  
 
 dat_trend <- readRDS(filename_trends) %>%
   filter(
-    LATIN_NAME %in% "Mytilus edulis",
+    LATIN_NAME %in% species,
     PARAM %in% params$PARAM_trend,
     Basis == "WW",
     Trend_type %in% "short") %>%
@@ -55,7 +60,7 @@ dat_trend <- readRDS(filename_trends) %>%
 
 dat_level_allyears <- readRDS(filename_110) %>%
   filter(
-    LATIN_NAME %in% "Mytilus edulis",
+    LATIN_NAME %in% species,
     PARAM %in% params$PARAM_level, 
     Basis == "WW") %>%
   group_by(PARAM, STATION_CODE, LATIN_NAME, TISSUE_NAME, Basis) %>%
@@ -147,7 +152,7 @@ lookup_eqs <- read.csv(fn) %>%
 
 fn <- "data_input/lookup/lookup_proref.rds"
 lookup_proref <- readRDS(fn) %>%
-  filter(LATIN_NAME %in% c("Mytilus edulis"))
+  filter(LATIN_NAME %in% c(species))
   
 # Add EQS and Proref to data    
 lookup_no_eqs <- dat_niva_2 %>%
@@ -187,7 +192,7 @@ lookup_limits_food <- lookup_limits_food_all %>%
   mutate(
     LATIN_NAME = case_when(
       NIVA_CODE %in% c("LI", "MU") ~ "Gadus morhua",
-      NIVA_CODE %in% "SB" ~ "Mytilus edulis"),
+      NIVA_CODE %in% "SB" ~ species),
     TISSUE_NAME = case_when(
       NIVA_CODE %in% "LI" ~ "Lever",
       NIVA_CODE %in% "MU" ~ "Muskel",
@@ -291,7 +296,7 @@ ggplot(dat_niva_5, aes(STATION_CODE, Ratio_food)) +
 ```{r}
 
 readr::write_csv(dat_niva_5, 
-                 glue("data/allregions_bluemussel_{current_year}.csv")
+                 glue("data/allregions_cod_{current_year}.csv")
                  )
 
 ```
