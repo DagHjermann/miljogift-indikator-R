@@ -69,7 +69,9 @@ dat_level <- dat_level_allyears %>%
   filter(
     MYEAR == last_year) %>%
   rename(
-    PARAM_level = PARAM)
+    PARAM_level = PARAM) %>%
+  select(
+    -last_year)   # also a column in trend data with this name
 
 dat_niva_1 <- dat_level %>%
   left_join(params, by = join_by(PARAM_level)) %>%
@@ -213,35 +215,84 @@ dat_niva_4 <- dat_niva_3 %>%
     perc_detected = Over_LOQ/N_median)
 
 ```
+### Add 1's and 2's  
+
+```{r}
+
+dat_niva_4 <- dat_niva_4 %>%
+  mutate(
+    Color_EQS = ifelse(Ratio_EQS <= 1, 1, 2),
+    Color_proref = ifelse(Ratio_proref <= 1, 1, 2),
+    Color_food = ifelse(Ratio_food <= 1, 1, 2),
+  ) %>%
+  rename(
+    PROREF_stations = Stations
+  )
+
+```
+
+
+
+### Change column order and selection  
+
+```{r}
+
+cols <- c("PARAM", "LATIN_NAME", "TISSUE_NAME", "Basis", "PARAM_level", "PARAM_trend", 
+          "STATION_CODE", "Long", "Lat", "Station_name", 
+          "Value", "UNIT", 
+          "Ratio_EQS", "Color_EQS", "Ratio_proref", "Color_proref", "Ratio_food", "Color_food",
+          "EQS", "PROREF", "Food_limit", 
+          "Trend_string", "trendshape", "MYEAR", "DRYWT", "FAT_PERC", 
+          "N_median", "Det_limit", "Over_LOQ", 
+          "Value_min", "Value_p25", "Value_p75", "Value_max", 
+          "PROREF_stations", 
+          "series", "firstyear_all", "lastyear_all", "Trend_type", "last_year", "first_year", "p", 
+          "y_mean", "y_q2.5", "y_q97.5", "perc_detected")
+
+dat_niva_5 <- dat_niva_4[cols]
+
+```
+
 
 ## Check plots  
 ```{r}
 
-ggplot(dat_niva_4, aes(STATION_CODE, Value, color = perc_detected)) +
+ggplot(dat_niva_5, aes(STATION_CODE, Value, color = perc_detected)) +
   geom_point() + 
   scale_y_log10() +
   facet_wrap(vars(PARAM), scales = "free_y") +
   ggeasy::easy_rotate_x_labels(-45)
 
-ggplot(dat_niva_4, aes(STATION_CODE, Ratio_EQS)) +
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_EQS)) +
   geom_point() + 
   scale_y_log10() +
   geom_hline(aes(yintercept = 1), linetype = "dashed") +
   facet_wrap(vars(PARAM), scales = "free_y") +
   ggeasy::easy_rotate_x_labels(-45)
 
-ggplot(dat_niva_4, aes(STATION_CODE, Ratio_proref)) +
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_proref)) +
   geom_point() + 
   scale_y_log10() +
   geom_hline(aes(yintercept = 1), linetype = "dashed") +
   facet_wrap(vars(PARAM), scales = "free_y") +
   ggeasy::easy_rotate_x_labels(-45)
 
-ggplot(dat_niva_4, aes(STATION_CODE, Ratio_food)) +
+ggplot(dat_niva_5, aes(STATION_CODE, Ratio_food)) +
   geom_point() + 
   scale_y_log10() +
   geom_hline(aes(yintercept = 1), linetype = "dashed") +
   facet_wrap(vars(PARAM), scales = "free_y") +
   ggeasy::easy_rotate_x_labels(-45)
+```
+
+
+## Save  
+
+```{r}
+
+readr::write_csv(dat_niva_5, 
+                 glue("data/allregions_bluemussel_{current_year}.csv")
+                 )
+
 ```
 
